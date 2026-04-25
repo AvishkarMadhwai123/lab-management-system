@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consumable Receipts Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style> 
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; } 
+        
+        /* New CSS for Print Functionality */
+        @media print {
+            /* Hide non-essential elements on print */
+            #addEntrySection, 
+            #backToDashboardBtn, 
+            #printBtn,
+            #importExcelContainer, 
+            #message-container, 
+            .border-b,
+            header .flex.space-x-3 {
+                display: none;
+            }
+
+            /* Ensure the main content takes up full space */
+            .container {
+                max-width: 100%;
+                box-shadow: none;
+                padding: 0;
+            }
+
+            /* Ensure table is fully visible */
+            .grid-cols-1.md\:grid-cols-2 {
+                display: block; /* Collapse grid layout for print */
+            }
+            #viewEntriesSection {
+                grid-column: 1 / -1; /* Make it full width */
+                margin-top: 0;
+            }
+
+            .overflow-y-auto {
+                overflow: visible !important;
+                height: auto !important;
+                border: 1px solid #ddd;
+            }
+            
+            /* Add a title back for the printout */
+            body::before {
+                content: "Consumable Register Report";
+                display: block;
+                font-size: 24pt;
+                font-weight: bold;
+                margin-bottom: 20px;
+                padding: 20px 20px 0 20px;
+            }
+            #labNameDisplay::before {
+                content: "Lab: ";
+                font-size: 14pt;
+                font-weight: 500;
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-6">
+    <div class="container mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg max-w-5xl">
+        
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">Consumable Register</h1>
+                <p id="labNameDisplay" class="text-gray-500 mt-1">Loading lab information...</p>
+            </div>
+            <div class="flex space-x-3 mt-4 sm:mt-0">
+                <div id="importExcelContainer" class="flex items-center space-x-2">
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden">
+                    <button id="importBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg">
+                        Import from Excel
+                    </button>
+                </div>
+                
+                <button id="printBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">
+                    Print Entries
+                </button>
+                <button id="backToDashboardBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg">
+                    Back to Dashboard
+                </button>
+            </div>
+        </header>
+
+        <div id="message-container" class="mb-6"></div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <section id="addEntrySection">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Add New Receipt (Manual)</h2>
+                <form id="receipt-form" class="space-y-4">
+                    <div>
+                        <label for="componentName" class="block text-sm font-medium text-gray-700">Name of Component <span class="text-red-500">*</span></label>
+                        <input type="text" id="componentName" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 border">
+                    </div>
+                    
+                    <div>
+                        <label for="dateOfReceipt" class="block text-sm font-medium text-gray-700">Date of Receipt <span class="text-red-500">*</span></label>
+                        <input type="date" id="dateOfReceipt" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 border">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="prfNo" class="block text-sm font-medium text-gray-700">PRF No <span class="text-red-500">*</span></label>
+                            <input type="text" id="prfNo" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 border">
+                        </div>
+                        <div>
+                            <label for="billNo" class="block text-sm font-medium text-gray-700">Bill No <span class="text-red-500">*</span></label>
+                            <input type="text" id="billNo" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 border">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="supplier" class="block text-sm font-medium text-gray-700">Supplier Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="supplier" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 border">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label for="quantity" class="block text-sm font-medium text-gray-700">Quantity <span class="text-red-500">*</span></label>
+                            <input type="number" id="quantity" required min="1"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 border">
+                        </div>
+                        <div>
+                            <label for="rate" class="block text-sm font-medium text-gray-700">Rate (₹) <span class="text-red-500">*</span></label>
+                            <input type="number" id="rate" required min="0" step="0.01"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 border">
+                        </div>
+                        <div>
+                            <label for="total" class="block text-sm font-medium text-gray-700">Total (₹)</label>
+                            <input type="text" id="total" readonly
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 bg-gray-100 cursor-not-allowed border">
+                        </div>
+                    </div>
+                    <div class="flex justify-end pt-2">
+                        <button type="submit"
+                            class="w-full sm:w-auto py-2 px-6 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Add Receipt Entry
+                        </button>
+                    </div>
+                </form>
+            </section>
+            <section id="viewEntriesSection">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Existing Receipts</h2>
+                <div class="overflow-y-auto rounded-lg shadow border h-96">
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-100 sticky top-0">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Component</th> <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supplier</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receipt-list" class="divide-y divide-gray-200">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+    
+    <script type="module">
+        // Import from centralized files
+        import { app } from './firebase-config.js';
+        import { showMessage } from './utils.js';
+
+        // Import Firebase modules
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            onSnapshot, 
+            serverTimestamp, 
+            query, 
+            doc, 
+            getDoc,
+            orderBy,
+            writeBatch,
+            Timestamp
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Initialize services
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // UI Element References
+        const receiptForm = document.getElementById('receipt-form');
+        const receiptList = document.getElementById('receipt-list');
+        const componentNameInput = document.getElementById('componentName'); // NEW REF
+        const quantityInput = document.getElementById('quantity');
+        const rateInput = document.getElementById('rate');
+        const totalInput = document.getElementById('total');
+        const backToDashboardBtn = document.getElementById('backToDashboardBtn');
+        const printBtn = document.getElementById('printBtn');
+        const importBtn = document.getElementById('importBtn'); 
+        const excelFileInput = document.getElementById('excelFileInput'); 
+        const messageContainerId = 'message-container';
+        
+        let labId = null;
+        let unsubscribeFromEntries = null;
+
+        // AUTHENTICATION AND DATA LOADING
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const urlParams = new URLSearchParams(window.location.search);
+                labId = urlParams.get('labId');
+                if (labId) {
+                    loadAndDisplayEntries();
+                } else {
+                    showMessage('Error: No Lab ID provided. Please return to the dashboard.', 'error', messageContainerId);
+                    document.getElementById('addEntrySection').classList.add('hidden');
+                }
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        async function loadAndDisplayEntries() {
+            try {
+                const labDoc = await getDoc(doc(db, 'labs', labId));
+                if (labDoc.exists()) {
+                    document.getElementById('labNameDisplay').textContent = `For Lab: ${labDoc.data().name}`;
+                }
+            } catch (error) { console.error("Error fetching lab name:", error); }
+
+            if (unsubscribeFromEntries) unsubscribeFromEntries();
+
+            // Correct, unified database path
+            const registerCollectionRef = collection(db, 'labs', labId, 'consumableRegister');
+            const q = query(registerCollectionRef, orderBy('timestamp', 'desc'));
+
+            unsubscribeFromEntries = onSnapshot(q, (snapshot) => {
+                receiptList.innerHTML = '';
+                if (snapshot.empty) {
+                    receiptList.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-500">No consumable entries found.</td></tr>`;
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const entry = doc.data();
+                    // Ensure the total is formatted as a number with 2 decimal places
+                    const formattedTotal = entry.total !== undefined && entry.total !== null ? parseFloat(entry.total).toFixed(2) : '0.00';
+                    const row = `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${entry.dateOfReceipt}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.componentName || 'N/A'}</td> <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.supplier}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.quantity}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formattedTotal}</td>
+                        </tr>`;
+                    receiptList.insertAdjacentHTML('beforeend', row);
+                });
+            }, (error) => {
+                console.error("Error fetching entries:", error);
+                showMessage('Error loading entries.', 'error', messageContainerId);
+            });
+        }
+
+        // --- Manual Entry Logic ---
+        function updateTotal() {
+            const quantity = parseFloat(quantityInput.value) || 0;
+            const rate = parseFloat(rateInput.value) || 0;
+            totalInput.value = (quantity * rate).toFixed(2);
+        }
+
+        quantityInput.addEventListener('input', updateTotal);
+        rateInput.addEventListener('input', updateTotal);
+        
+        receiptForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!labId) {
+                showMessage("Cannot add entry without a valid Lab ID.", 'error', messageContainerId);
+                return;
+            }
+
+            const formData = {
+                componentName: componentNameInput.value.trim(), // GET NEW FIELD VALUE
+                dateOfReceipt: document.getElementById('dateOfReceipt').value,
+                prfNo: document.getElementById('prfNo').value.trim(),
+                billNo: document.getElementById('billNo').value.trim(),
+                supplier: document.getElementById('supplier').value.trim(),
+                quantity: parseInt(quantityInput.value),
+                rate: parseFloat(rateInput.value),
+                total: parseFloat(totalInput.value),
+            };
+
+            // Include componentName validation
+            if (!formData.componentName || !formData.dateOfReceipt || !formData.prfNo || !formData.billNo || !formData.supplier || isNaN(formData.quantity) || isNaN(formData.rate)) {
+                 showMessage("Please fill all required fields correctly, including the Component Name.", 'error', messageContainerId);
+                 return;
+            }
+
+            try {
+                const registerCollectionRef = collection(db, 'labs', labId, 'consumableRegister');
+                await addDoc(registerCollectionRef, { ...formData, timestamp: serverTimestamp() });
+                showMessage("Receipt entry added successfully!", 'success', messageContainerId);
+                receiptForm.reset();
+                updateTotal();
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                showMessage(`Error adding entry: ${error.message}`, 'error', messageContainerId);
+            }
+        });
+
+        // --- Print Logic ---
+        printBtn.addEventListener('click', () => {
+            window.print();
+        });
+
+        // --- Excel Import Logic ---
+        importBtn.addEventListener('click', () => {
+            excelFileInput.click();
+        });
+
+        excelFileInput.addEventListener('change', handleExcelUpload);
+
+        function handleExcelUpload(e) {
+            if (!labId) {
+                showMessage("Cannot import entries without a valid Lab ID.", 'error', messageContainerId);
+                return;
+            }
+
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: "yyyy-mm-dd" }); 
+                    const sheetName = workbook.SheetNames[0]; 
+                    const worksheet = workbook.Sheets[sheetName];
+
+                    // UPDATED HEADER MAPPING: 7 columns expected!
+                    // A: DateOfReceipt, B: ComponentName, C: PRFNo, D: BillNo, E: Supplier, F: Quantity, G: Rate
+                    const jsonEntries = XLSX.utils.sheet_to_json(worksheet, {
+                        header: [
+                            "DateOfReceipt", 
+                            "ComponentName", // NEW COLUMN KEY
+                            "PRFNo", 
+                            "BillNo", 
+                            "Supplier", 
+                            "Quantity", 
+                            "Rate"
+                        ],
+                        range: 1, 
+                        raw: false
+                    });
+                    
+                    if (jsonEntries.length === 0) {
+                        showMessage("Excel sheet is empty or headers are missing. Expected 7 columns.", 'error', messageContainerId);
+                        return;
+                    }
+
+                    await saveExcelEntriesToFirestore(jsonEntries);
+
+                } catch (error) {
+                    console.error("Error processing Excel file:", error);
+                    showMessage(`Error reading Excel file: ${error.message}. Check your file format and ensure there are 7 columns.`, 'error', messageContainerId);
+                } finally {
+                    excelFileInput.value = ''; 
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function saveExcelEntriesToFirestore(entries) {
+            const batch = writeBatch(db);
+            const registerCollectionRef = collection(db, 'labs', labId, 'consumableRegister');
+            let successfulImports = 0;
+            let failedImports = 0;
+
+            for (const entry of entries) {
+                // Perform validation and conversion
+                const quantity = parseInt(entry.Quantity);
+                const rate = parseFloat(entry.Rate);
+                const dateString = entry.DateOfReceipt ? entry.DateOfReceipt.split('T')[0] : null; 
+                const total = (quantity * rate);
+
+                // Include ComponentName in validation
+                if (dateString && entry.ComponentName && entry.PRFNo && entry.BillNo && entry.Supplier && !isNaN(quantity) && quantity > 0 && !isNaN(rate) && rate >= 0) {
+                    const newEntry = {
+                        dateOfReceipt: dateString,
+                        componentName: entry.ComponentName.toString().trim(), // SAVE NEW FIELD
+                        prfNo: entry.PRFNo.toString().trim(),
+                        billNo: entry.BillNo.toString().trim(),
+                        supplier: entry.Supplier.toString().trim(),
+                        quantity: quantity,
+                        rate: rate,
+                        total: total,
+                        timestamp: serverTimestamp()
+                    };
+                    
+                    const newDocRef = doc(registerCollectionRef);
+                    batch.set(newDocRef, newEntry);
+                    successfulImports++;
+                } else {
+                    failedImports++;
+                    console.warn("Skipping invalid entry:", entry);
+                }
+            }
+
+            try {
+                if (successfulImports > 0) {
+                    await batch.commit();
+                    showMessage(`${successfulImports} entries imported successfully! (${failedImports} failed/skipped).`, 'success', messageContainerId);
+                } else if (failedImports > 0) {
+                    showMessage(`All entries failed validation. Check the required 7 columns and data types in your spreadsheet.`, 'error', messageContainerId);
+                } else {
+                    showMessage("No valid data found to import.", 'warning', messageContainerId);
+                }
+            } catch (error) {
+                console.error("Firestore batch commit failed:", error);
+                showMessage(`Error committing batch: ${error.message}`, 'error', messageContainerId);
+            }
+        }
+        
+        // --- Navigation ---
+        backToDashboardBtn.addEventListener('click', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dashboard = urlParams.get('dashboard');
+            
+            let dashboardUrl = 'assistant_dashboard.html';
+            if (dashboard === 'incharge_dashboard') {
+                dashboardUrl = 'incharge_dashboard.html';
+            }
+            window.location.href = dashboardUrl;
+        });
+    </script>
+</body>
+</html>

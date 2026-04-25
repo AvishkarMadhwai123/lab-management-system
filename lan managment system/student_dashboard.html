@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .modal { backdrop-filter: blur(4px); }
+        .sidebar-link.active { background-color: #eef2ff; color: #4338ca; border-left: 4px solid #4f46e5; }
+        .sidebar-link { transition: all 0.2s ease-in-out; border-left: 4px solid transparent; }
+        .sidebar-link:hover { background-color: #f0f2f5; }
+        .lab-card { cursor: pointer; transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
+        .lab-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .request-tab-btn.active { border-color: #4f46e5; color: #4f46e5; background-color: #eef2ff; }
+    </style>
+</head>
+<body class="flex min-h-screen">
+
+    <aside class="w-64 bg-white shadow-lg flex flex-col flex-shrink-0">
+        <div class="p-6 border-b text-center">
+            <h1 class="text-2xl font-bold text-indigo-600">ECE Labs</h1>
+            <p class="text-sm text-gray-500">Student Panel</p>
+        </div>
+        <nav class="flex-grow pt-4">
+            <a href="#" id="labsTab" class="sidebar-link active flex items-center px-6 py-3 text-gray-700 font-semibold">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2v-5z" /></svg>
+                Available Labs
+            </a>
+            <a href="#" id="componentsTab" class="sidebar-link flex items-center px-6 py-3 text-gray-700 font-semibold">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                Browse Components
+            </a>
+            <a href="#" id="myRequestsTab" class="sidebar-link flex items-center px-6 py-3 text-gray-700 font-semibold">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" /><path fill-rule="evenodd" d="M4 5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 011-1h6a1 1 0 110 2H8a1 1 0 01-1-1zm-1 4a1 1 0 100 2h6a1 1 0 100-2H6z" clip-rule="evenodd" /></svg>
+                My Requests
+            </a>
+            <a href="#" id="complaintTab" class="sidebar-link flex items-center px-6 py-3 text-gray-700 font-semibold">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                File Complaint
+            </a>
+            <a href="#" id="suggestionTab" class="sidebar-link flex items-center px-6 py-3 text-gray-700 font-semibold">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
+                Suggest Component
+            </a>
+        </nav>
+        <div class="p-6 border-t">
+            <p id="welcomeMessage" class="text-sm text-gray-600 truncate">Welcome!</p>
+            <button id="logoutButton" class="w-full mt-4 bg-red-500 text-white px-4 py-2 rounded-lg font-semibold shadow-md hover:bg-red-600 transition-colors text-sm">
+                Logout
+            </button>
+        </div>
+    </aside>
+
+    <div class="flex-grow p-6 md:p-8 overflow-y-auto">
+        <div id="message-container" class="mb-6 sticky top-0 z-50"></div>
+
+        <main>
+            <section id="labsSection">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">Available Labs</h2>
+                <div id="labsList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    </div>
+            </section>
+
+            <section id="componentsSection" class="hidden">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">Browse All Inventory</h2>
+                <div class="mb-4">
+                    <input type="text" id="componentSearchInput" placeholder="Search for components, consumables, labs, or dead stock..." class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div id="componentList" class="space-y-3 max-h-[70vh] overflow-y-auto"></div>
+            </section>
+
+            <section id="myRequestsSection" class="hidden">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">My Component Requests</h2>
+                <div class="border-b border-gray-200 mb-4">
+                    <nav class="-mb-px flex space-x-6">
+                        <button id="pendingRequestsBtn" class="request-tab-btn active whitespace-nowrap py-3 px-1 border-b-2 font-semibold text-sm">Pending</button>
+                        <button id="historyRequestsBtn" class="request-tab-btn whitespace-nowrap py-3 px-1 border-b-2 font-semibold text-sm text-gray-500 hover:text-gray-700">History</button>
+                    </nav>
+                </div>
+                
+                <div id="pendingRequestsContainer">
+                    <div id="myRequestsList" class="space-y-4"></div>
+                </div>
+
+                <div id="historyRequestsContainer" class="hidden">
+                    <div id="historyRequestsList" class="space-y-4"></div>
+                </div>
+            </section>
+
+            <section id="complaintSection" class="hidden">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">File a Complaint</h2>
+                <div class="bg-white p-6 rounded-xl shadow-lg border max-w-2xl">
+                    <form id="complaintForm" class="space-y-4">
+                        <div>
+                            <label for="complaintComponentSelect" class="block text-sm font-medium text-gray-700">Select Component <span class="text-red-500">*</span></label>
+                            <select id="complaintComponentSelect" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-white focus:ring-indigo-500 focus:border-indigo-500"></select>
+                        </div>
+                        
+                        <div>
+                            <label for="complaintDescription" class="block text-sm font-medium text-gray-700">Problem Description <span class="text-red-500">*</span></label>
+                            <textarea id="complaintDescription" rows="4" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="Please describe the issue..."></textarea>
+                        </div>
+                        <div class="flex justify-end pt-2">
+                            <button type="submit" class="py-2 px-6 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold">Submit Complaint</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+            
+            <section id="suggestionSection" class="hidden">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">Suggest New Component for Purchase</h2>
+                <div class="bg-white p-6 rounded-xl shadow-lg border max-w-2xl">
+                    <p class="text-sm text-gray-600 mb-4">Use this form to suggest a component that is **not currently available** in any lab, but you believe the department should acquire.</p>
+                    <form id="suggestionForm" class="space-y-4">
+                        
+                        <div>
+                            <label for="suggestedComponentName" class="block text-sm font-medium text-gray-700">Component Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="suggestedComponentName" required 
+                                   class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="e.g., Arduino Uno R4 Wi-Fi">
+                        </div>
+
+                        <div>
+                            <label for="suggestedCompany" class="block text-sm font-medium text-gray-700">Company Name (of Component) <span class="text-red-500">*</span></label>
+                            <input type="text" id="suggestedCompany" required 
+                                   class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="e.g., SparkFun, Texas Instruments, Elegoo">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="suggestedQuantity" class="block text-sm font-medium text-gray-700">Quantity Needed <span class="text-red-500">*</span></label>
+                                <input type="number" id="suggestedQuantity" min="1" required 
+                                       class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="10">
+                            </div>
+                            <div>
+                                <label for="suggestedPrice" class="block text-sm font-medium text-gray-700">Approx. Price (per unit, optional)</label>
+                                <input type="number" id="suggestedPrice" min="0" step="0.01"
+                                       class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="e.g., 850.00">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="suggestedReason" class="block text-sm font-medium text-gray-700">Reason for Purchase (Why the department should acquire it) <span class="text-red-500">*</span></label>
+                            <textarea id="suggestedReason" rows="4" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="This component is essential for the advanced concepts in the Embedded Systems course and is required for our final year project."></textarea>
+                        </div>
+                        
+                        <div class="flex justify-end pt-2">
+                            <button type="submit" class="py-2 px-6 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold">Submit Suggestion</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modalContainer"></div>
+
+    <script type="module">
+        // student_dashboard.js (Integrated and Fixed)
+
+        import { app } from './firebase-config.js';
+        import { showMessage } from './utils.js';
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, collection, onSnapshot, doc, getDoc, addDoc, 
+            query, where, serverTimestamp, orderBy, getDocs
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- DOM Elements ---
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        const logoutButton = document.getElementById('logoutButton');
+        const messageContainerId = 'message-container';
+        const modalContainer = document.getElementById('modalContainer');
+
+        const tabs = {
+            labs: document.getElementById('labsTab'),
+            components: document.getElementById('componentsTab'),
+            myRequests: document.getElementById('myRequestsTab'),
+            complaint: document.getElementById('complaintTab'),
+            suggestion: document.getElementById('suggestionTab') // NEW
+        };
+        const sections = {
+            labs: document.getElementById('labsSection'),
+            components: document.getElementById('componentsSection'),
+            myRequests: document.getElementById('myRequestsSection'),
+            complaint: document.getElementById('complaintSection'),
+            suggestion: document.getElementById('suggestionSection') // NEW
+        };
+
+        const labsList = document.getElementById('labsList');
+        const componentSearchInput = document.getElementById('componentSearchInput');
+        const componentList = document.getElementById('componentList');
+        const complaintForm = document.getElementById('complaintForm');
+        const complaintComponentSelect = document.getElementById('complaintComponentSelect');
+        
+        // Form elements for new Suggestion feature
+        const suggestionForm = document.getElementById('suggestionForm'); // NEW
+
+        // DOM elements for PRN and Class inputs (DELETED: studentPrnInput, studentClassInput)
+        // Kept for suggestion form only (which still uses the hidden fields, but we will simplify the complaint form)
+        // No need to define them here as they are not used for complaint form anymore.
+
+        // Elements for request tabs
+        const myRequestsList = document.getElementById('myRequestsList');
+        const historyRequestsList = document.getElementById('historyRequestsList');
+        const pendingRequestsBtn = document.getElementById('pendingRequestsBtn');
+        const historyRequestsBtn = document.getElementById('historyRequestsBtn');
+        const pendingRequestsContainer = document.getElementById('pendingRequestsContainer');
+        const historyRequestsContainer = document.getElementById('historyRequestsContainer');
+        
+        // --- State ---
+        let unsubscribers = [];
+        let allComponents = [];
+        let currentUser = null;
+        let currentUserData = null;
+
+        // --- AUTHENTICATION & INITIALIZATION ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (
+  userDoc.exists() && 
+  (
+    userDoc.data().role === 'student' || 
+    userDoc.data().role === 'assistant' || 
+    userDoc.data().role === 'incharge'
+  )
+) {
+
+                    currentUserData = userDoc.data();
+                    welcomeMessage.textContent = `Welcome, ${currentUserData.name || user.email}!`;
+                    
+                    // REMOVED: Pre-fill logic for studentPrnInput and studentClassInput
+
+                    await fetchAllComponents();
+                    setupLabsListener(); 
+                    showSection('labs');
+                } else {
+                    await signOut(auth);
+                    window.location.href = 'login.html';
+                }
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        // --- UI & SECTION MANAGEMENT (MODIFIED) ---
+        function showSection(sectionName) {
+            unsubscribers.forEach(unsub => unsub());
+            unsubscribers = [];
+
+            Object.keys(sections).forEach(key => {
+                sections[key].classList.toggle('hidden', key !== sectionName);
+                tabs[key].classList.toggle('active', key === sectionName);
+            });
+
+            switch(sectionName) {
+                case 'labs':
+                    setupLabsListener();
+                    break;
+                case 'components':
+                    renderComponents();
+                    break;
+                case 'myRequests':
+                    setupMyRequestsListener();
+                    setupHistoryRequestsListener();
+                    showRequestTab('pending');
+                    break;
+                case 'complaint':
+                    populateComplaintDropdown();
+                    break;
+                case 'suggestion': // NEW
+                    // No listener needed, just show the form
+                    break;
+            }
+        }
+
+        Object.keys(tabs).forEach(key => {
+            tabs[key].addEventListener('click', (e) => { e.preventDefault(); showSection(key); });
+        });
+
+        function showRequestTab(tabName) {
+            if (tabName === 'pending') {
+                pendingRequestsContainer.classList.remove('hidden');
+                historyRequestsContainer.classList.add('hidden');
+                pendingRequestsBtn.classList.add('active');
+                historyRequestsBtn.classList.remove('active');
+            } else {
+                pendingRequestsContainer.classList.add('hidden');
+                historyRequestsContainer.classList.remove('hidden');
+                pendingRequestsBtn.classList.remove('active');
+                historyRequestsBtn.classList.add('active');
+            }
+        }
+        pendingRequestsBtn.addEventListener('click', () => showRequestTab('pending'));
+        historyRequestsBtn.addEventListener('click', () => showRequestTab('history'));
+
+
+        // --- CORE DATA FETCHING (UNCHANGED) ---
+        async function fetchAllComponents() {
+            allComponents = [];
+            try {
+                const labsSnapshot = await getDocs(collection(db, 'labs'));
+
+                const fetchRegisterData = async (lab, collectionName, registerType) => {
+                    const snapshot = await getDocs(collection(db, 'labs', lab.id, collectionName));
+                    return snapshot.docs.map(doc => {
+                        const data = doc.data();
+                        const name = data.name || data.productName || data.componentName || 'No Name';
+                        const quantity = data.quantity || data.availableQuantity || 'N/A';
+                        
+                        return {
+                            id: doc.id,
+                            lab: lab,
+                            registerType: registerType,
+                            name: name,
+                            quantity: quantity,
+                            component: data,
+                            ...data
+                        };
+                    });
+                };
+
+                for (const labDoc of labsSnapshot.docs) {
+                    const lab = { id: labDoc.id, ...labDoc.data() };
+                    
+                    const components = await fetchRegisterData(lab, 'components', 'Inventory');
+                    const consumables = await fetchRegisterData(lab, 'consumableRegister', 'Consumable');
+                    const deadStock = await fetchRegisterData(lab, 'deadStockRegister', 'Dead Stock');
+
+                    allComponents.push(...components, ...consumables, ...deadStock);
+                }
+                
+                allComponents.sort((a, b) => a.name.localeCompare(b.name));
+            } catch (error) {
+                console.error("Error fetching all components:", error);
+                showMessage('Could not load components. Please check Firestore Rules.', 'error', messageContainerId);
+            }
+        }
+        
+        // --- AVAILABLE LABS (UNCHANGED) ---
+        function setupLabsListener() {
+            labsList.innerHTML = '<p class="text-gray-500">Loading labs...</p>';
+            const q = query(collection(db, 'labs'), orderBy('name'));
+            const unsub = onSnapshot(q, (snapshot) => {
+                labsList.innerHTML = '';
+                if (snapshot.empty) {
+                    labsList.innerHTML = '<p class="col-span-full text-center text-gray-500">No labs are available right now.</p>';
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const lab = { id: doc.id, ...doc.data() };
+                    renderLabCard(lab);
+                });
+            });
+            unsubscribers.push(unsub);
+        }
+
+        function renderLabCard(lab) {
+            const card = document.createElement('div');
+            card.className = 'lab-card p-6 border rounded-xl bg-white shadow-sm';
+            card.innerHTML = `
+                <h3 class="font-bold text-lg text-gray-800">${lab.name}</h3>
+                <p class="text-sm text-gray-600">Room: ${lab.roomNo}</p>
+                <p class="text-xs text-gray-500 mt-2 truncate">${lab.description || 'No description available.'}</p>
+            `;
+            card.addEventListener('click', () => openLabDetailsModal(lab));
+            labsList.appendChild(card);
+        }
+
+        function openLabDetailsModal(lab) {
+            modalContainer.innerHTML = `
+                <div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center modal z-50">
+                    <div class="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full relative">
+                        <button id="closeModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">${lab.name}</h3>
+                        <p class="text-md text-gray-600 mb-6">Room: ${lab.roomNo}</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Description</h4>
+                                <p class="text-gray-700">${lab.description || 'No description provided.'}</p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Lab Incharge</h4>
+                                <p class="text-gray-700">${lab.inchargeName || 'Not Assigned'}</p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Lab Assistant</h4>
+                                <p class="text-gray-700">${lab.assistantName || 'Not Assigned'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('closeModal').addEventListener('click', () => modalContainer.innerHTML = '');
+        }
+        
+        // --- COMPONENT BROWSING & SEARCH (UNCHANGED) ---
+        function renderComponents(filter = '') {
+            componentList.innerHTML = '';
+            const searchTerm = filter.toLowerCase().trim();
+
+            const filtered = allComponents.filter(item => {
+                const itemName = item.name?.toLowerCase() || '';
+                const labName = item.lab?.name?.toLowerCase() || '';
+                const registerType = item.registerType?.toLowerCase() || '';
+
+                return (
+                    itemName.includes(searchTerm) ||
+                    labName.includes(searchTerm) ||
+                    registerType.includes(searchTerm)
+                );
+            });
+
+            if (filtered.length === 0) {
+                componentList.innerHTML = `<p class="text-center text-gray-500 p-4">No inventory found${filter ? ' matching your search' : ''}.</p>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                const type = item.registerType || 'Inventory';
+                let typeColor = 'text-gray-500';
+                if (type === 'Dead Stock') {
+                    typeColor = 'text-red-500';
+                } else if (type === 'Consumable') {
+                    typeColor = 'text-orange-500';
+                }
+
+                card.className = 'p-4 border rounded-lg bg-white flex justify-between items-center';
+                card.innerHTML = `
+                    <div>
+                        <p class="font-bold text-gray-800">${item.name}</p>
+                        <p class="text-sm ${typeColor}">${type}</p> 
+                        <p class="text-sm text-gray-500">In Lab: <span class="font-semibold">${item.lab.name}</span></p>
+                        <p class="text-xs text-gray-400">Available: ${item.quantity}</p>
+                    </div>
+                    <button class="request-btn bg-indigo-600 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700">Request</button>
+                `;
+                card.querySelector('.request-btn').addEventListener('click', () => openRequestModal(item));
+                componentList.appendChild(card);
+            });
+        }
+
+        componentSearchInput.addEventListener('input', () => renderComponents(componentSearchInput.value));
+
+        // --- COMPONENT REQUEST WORKFLOW (UNCHANGED) ---
+        function openRequestModal(item) {
+            modalContainer.innerHTML = `
+                <div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center modal z-50">
+                    <div class="bg-white p-8 rounded-lg shadow-xl max-w-md w-full relative">
+                        <button id="closeModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Request Component</h3>
+                        <p class="text-lg font-semibold">${item.name}</p>
+                        <p class="text-gray-500 text-sm mb-6">Type: ${item.registerType} | From: ${item.lab.name}</p>
+                        <form id="requestComponentForm">
+                            <div>
+                                <label for="reqQty" class="block text-sm font-medium">Quantity (Max: ${item.quantity})</label>
+                                <input type="number" id="reqQty" min="1" max="${item.quantity}" value="1" required class="mt-1 w-full p-2 border rounded">
+                            </div>
+                            <div class="flex justify-end pt-4">
+                                <button type="submit" class="py-2 px-6 bg-indigo-600 text-white rounded-lg font-semibold">Submit</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.getElementById('closeModal').addEventListener('click', () => modalContainer.innerHTML = '');
+            document.getElementById('requestComponentForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const quantity = parseInt(document.getElementById('reqQty').value);
+                submitComponentRequest(item, quantity);
+            });
+        }
+
+        async function submitComponentRequest(item, quantity) {
+            const requestData = {
+                studentId: currentUser.uid,
+                studentName: currentUserData.name,
+                componentName: item.name, 
+                componentId: item.id,
+                componentType: item.registerType, 
+                quantity: quantity,
+                labId: item.lab.id,
+                labName: item.lab.name,
+                status: 'pending',
+                requestDate: serverTimestamp()
+            };
+            try {
+                await addDoc(collection(db, 'requests'), requestData);
+                showMessage('Component request submitted successfully!', 'success', messageContainerId);
+                modalContainer.innerHTML = '';
+                showSection('myRequests');
+            } catch (error) {
+                showMessage(`Error submitting request: ${error.message}`, 'error', messageContainerId);
+            }
+        }
+
+        // --- MY REQUESTS & HISTORY (UNCHANGED) ---
+        function setupMyRequestsListener() {
+            myRequestsList.innerHTML = '<p class="text-gray-500 text-center">Loading pending requests...</p>';
+            const q = query(collection(db, 'requests'), where('studentId', '==', currentUser.uid), where('status', '==', 'pending'), orderBy('requestDate', 'desc'));
+            const unsub = onSnapshot(q, (snapshot) => {
+                myRequestsList.innerHTML = '';
+                if (snapshot.empty) {
+                    myRequestsList.innerHTML = '<p class="text-gray-500 text-center">You have no pending requests.</p>';
+                    return;
+                }
+                snapshot.forEach(doc => renderMyRequestCard(doc.data(), 'pending'));
+            }, (error) => {
+                  console.error("Error fetching pending requests:", error);
+                  myRequestsList.innerHTML = '<p class="text-red-500 text-center">Could not load requests. Check console for details.</p>';
+            });
+            unsubscribers.push(unsub);
+        }
+
+        function setupHistoryRequestsListener() {
+            historyRequestsList.innerHTML = '<p class="text-gray-500 text-center">Loading request history...</p>';
+            const q = query(collection(db, 'requests'), where('studentId', '==', currentUser.uid), where('status', 'in', ['approved', 'rejected']), orderBy('requestDate', 'desc'));
+            const unsub = onSnapshot(q, (snapshot) => {
+                historyRequestsList.innerHTML = '';
+                if (snapshot.empty) {
+                    historyRequestsList.innerHTML = '<p class="text-gray-500 text-center">You have no request history yet.</p>';
+                    return;
+                }
+                snapshot.forEach(doc => renderMyRequestCard(doc.data(), 'history'));
+            }, (error) => {
+                  console.error("Error fetching request history:", error);
+                  historyRequestsList.innerHTML = '<p class="text-red-500 text-center">Could not load history. Check console for details.</p>';
+            });
+            unsubscribers.push(unsub);
+        }
+
+        function renderMyRequestCard(req, type) {
+              const statusClasses = {
+                pending: 'bg-yellow-100 text-yellow-800',
+                approved: 'bg-green-100 text-green-800',
+                rejected: 'bg-red-100 text-red-800'
+            };
+            const card = document.createElement('div');
+            card.className = 'p-4 border rounded-lg bg-white';
+            card.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-bold text-gray-800">${req.componentName} (Qty: ${req.quantity})</p>
+                        <p class="text-sm text-gray-500">Lab: ${req.labName}</p>
+                        <p class="text-xs text-gray-400 mt-1">Requested: ${req.requestDate ? new Date(req.requestDate.seconds * 1000).toLocaleString() : 'Just now'}</p>
+                    </div>
+                    <span class="text-xs font-bold px-2 py-1 rounded-full ${statusClasses[req.status] || ''}">${req.status.toUpperCase()}</span>
+                </div>
+            `;
+            
+            if (type === 'pending') {
+                myRequestsList.appendChild(card);
+            } else {
+                historyRequestsList.appendChild(card);
+            }
+        }
+        
+        // --- FILE COMPLAINT (MODIFIED) ---
+        function populateComplaintDropdown() {
+            complaintComponentSelect.innerHTML = '<option value="">Select a component...</option>';
+            allComponents.forEach(item => {
+                const option = document.createElement('option');
+                option.value = `${item.name}|${item.lab.id}|${item.lab.name}`; 
+                option.textContent = `${item.name} (${item.registerType} from ${item.lab.name})`;
+                complaintComponentSelect.appendChild(option);
+            });
+        }
+
+        complaintForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const selected = complaintComponentSelect.value;
+            const description = document.getElementById('complaintDescription').value;
+            
+            // Get PRN and Class directly from currentUserData
+            const studentPRN = currentUserData.prn || 'N/A';
+            const studentClass = currentUserData.studentClass || currentUserData.classSection || 'N/A';
+
+            if (!selected || !description) {
+                showMessage('Please select a component and describe the problem.', 'error', messageContainerId);
+                return;
+            }
+
+            const [componentName, labId, labName] = selected.split('|');
+
+            const complaintData = {
+                studentId: currentUser.uid,
+                studentName: currentUserData.name,
+                studentPRN: studentPRN, // Use value from currentUserData
+                studentClass: studentClass, // Use value from currentUserData
+                componentName,
+                labId,
+                labName,
+                problemDescription: description,
+                status: 'new',
+                complaintDate: serverTimestamp()
+            };
+
+            try {
+                await addDoc(collection(db, 'complaints'), complaintData);
+                showMessage('Complaint filed successfully. The lab staff will be notified.', 'success', messageContainerId);
+                complaintForm.reset();
+            } catch(error) {
+                showMessage(`Error filing complaint: ${error.message}`, 'error', messageContainerId);
+            }
+        });
+        
+        // --- NEW COMPONENT SUGGESTION HANDLER (UNCHANGED LOGIC, using same PRN/Class fetching logic) ---
+        suggestionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('suggestedComponentName').value.trim();
+            const company = document.getElementById('suggestedCompany').value.trim();
+            const quantity = parseInt(document.getElementById('suggestedQuantity').value);
+            const price = parseFloat(document.getElementById('suggestedPrice').value) || 0; // Optional price
+            const reason = document.getElementById('suggestedReason').value.trim();
+
+            if (!name || !company || !quantity || !reason) {
+                 showMessage('Please fill in all required fields for the component suggestion.', 'error', messageContainerId);
+                 return;
+            }
+            
+            const studentPRN = currentUserData.prn || 'N/A'; // Fetch from currentUserData
+            const studentClass = currentUserData.studentClass || currentUserData.classSection || 'N/A'; // Fetch from currentUserData
+
+            const suggestionData = {
+                studentId: currentUser.uid,
+                studentName: currentUserData.name,
+                studentPRN: studentPRN,
+                studentClass: studentClass,
+                
+                componentName: name,
+                companyName: company,
+                quantity: quantity,
+                approxPrice: price,
+                reasonForPurchase: reason,
+                
+                status: 'pending', // New suggestions start as pending
+                suggestionDate: serverTimestamp()
+            };
+
+            try {
+                // Submit to a new 'componentSuggestions' collection
+                await addDoc(collection(db, 'componentSuggestions'), suggestionData);
+                showMessage('Component suggestion submitted successfully! Thank you for your input.', 'success', messageContainerId);
+                suggestionForm.reset();
+            } catch(error) {
+                showMessage(`Error submitting suggestion: ${error.message}`, 'error', messageContainerId);
+            }
+        });
+
+
+        // --- LOGOUT ---
+        logoutButton.addEventListener('click', async () => {
+            unsubscribers.forEach(unsub => unsub());
+            await signOut(auth);
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>
