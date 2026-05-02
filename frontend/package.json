@@ -1,0 +1,21 @@
+{
+  "name": "lab-management-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for ECE Lab Management System",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve .",
+    "build": "echo 'Static site - no build step required'",
+    "dev": "serve . -l 8000",
+    "preview": "serve . -p 8080"
+  },
+  "keywords": ["lab-management", "frontend", "static-site"],
+  "author": "ECE Lab Management Team",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
