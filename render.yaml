@@ -3,7 +3,6 @@ services:
   - type: web
     name: lab-management-backend
     runtime: node
-    plan: free
     buildCommand: npm install
     startCommand: npm start
     envVars:
@@ -25,7 +24,6 @@ services:
   - type: web
     name: lab-management-frontend
     runtime: static
-    plan: free
     buildCommand: echo "No build needed - static files"
     staticPublishPath: ./frontend
     rootDir: ./
