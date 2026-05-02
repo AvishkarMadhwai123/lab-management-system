@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dead Stock Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style> 
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; } 
+
+        /* New CSS for Print Functionality */
+        @media print {
+            /* Hide non-essential elements on print */
+            #addEntrySection, 
+            #backToDashboardBtn, 
+            #printEntriesBtn,
+            #importExcelContainer,
+            #message-container, 
+            .border-b,
+            header .flex.space-x-3 { 
+                display: none;
+            }
+
+            /* Ensure the main content takes up full space */
+            .container {
+                max-width: 100%;
+                box-shadow: none;
+                padding: 0;
+            }
+
+            /* Ensure the table section is full width and content is visible */
+            .grid-cols-1.md\:grid-cols-2 {
+                display: block; /* Collapse grid layout for print */
+            }
+            #viewEntriesSection {
+                margin-top: 0;
+            }
+            .overflow-y-auto {
+                overflow: visible !important;
+                height: auto !important;
+                border: 1px solid #ddd;
+            }
+            
+            /* Add a title back for the printout */
+            body::before {
+                content: "Dead Stock Register Report";
+                display: block;
+                font-size: 24pt;
+                font-weight: bold;
+                margin-bottom: 20px;
+                padding: 20px 20px 0 20px;
+            }
+            #labNameDisplay::before {
+                content: "Lab: ";
+                font-size: 14pt;
+                font-weight: 500;
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-6">
+    <div class="container mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg max-w-5xl">
+        
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">Dead Stock Register</h1>
+                <p id="labNameDisplay" class="text-gray-500 mt-1">Loading lab information...</p>
+            </div>
+            <div class="flex space-x-3 mt-4 sm:mt-0">
+                <div id="importExcelContainer" class="flex items-center space-x-2">
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden">
+                    <button id="importBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors">
+                        Import from Excel
+                    </button>
+                </div>
+
+                <button id="printEntriesBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors">
+                    Print Entries
+                </button>
+                
+                <button id="backToDashboardBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-md transition-colors">
+                    Back to Dashboard
+                </button>
+            </div>
+        </header>
+
+        <div id="message-container" class="mb-6"></div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <section id="addEntrySection">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Add New Entry (Manual)</h2>
+                <form id="deadStockForm" class="space-y-4">
+                    <div>
+                        <label for="componentName" class="block text-sm font-medium text-gray-700">Component Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="componentName" required
+                               class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Digital Multimeter">
+                    </div>
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-700">Detailed Description of Article <span class="text-red-500">*</span></label>
+                        <input type="text" id="description" required
+                               class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Model XYZ, with 4 1/2 digits, Calibrated">
+                    </div>
+                    <div>
+                        <label for="supplier" class="block text-sm font-medium text-gray-700">Name of Supplier <span class="text-red-500">*</span></label>
+                        <input type="text" id="supplier" required
+                               class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="billNo" class="block text-sm font-medium text-gray-700">Bill No. <span class="text-red-500">*</span></label>
+                            <input type="text" id="billNo" placeholder="e.g., BN-123" required
+                                class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="billDate" class="block text-sm font-medium text-gray-700">Bill Date <span class="text-red-500">*</span></label>
+                            <input type="date" id="billDate" required
+                                class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="quantity" class="block text-sm font-medium text-gray-700">Quantity <span class="text-red-500">*</span></label>
+                        <input type="number" id="quantity" min="1" value="1" required
+                               class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label for="value" class="block text-sm font-medium text-gray-700">Total Value (₹) <span class="text-red-500">*</span></label>
+                        <input type="number" id="value" min="0" step="0.01" required placeholder="e.g., 1500.50"
+                               class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div class="flex justify-end pt-2">
+                        <button type="submit"
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition-colors shadow-md">
+                            Add Entry
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section id="viewEntriesSection">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Existing Entries</h2>
+                <div class="overflow-y-auto rounded-lg shadow border h-96">
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-100 sticky top-0">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Component Name</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bill No.</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bill Date</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deadStockTableBody" class="divide-y divide-gray-200">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+    
+    <script type="module">
+        // Import from centralized files
+        import { app } from './firebase-config.js';
+        import { showMessage } from './utils.js';
+
+        // Import Firebase modules
+        import { 
+            getAuth, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            onSnapshot, 
+            serverTimestamp, 
+            query, 
+            doc, 
+            getDoc,
+            orderBy,
+            writeBatch 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Initialize services
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // UI Element References
+        const deadStockForm = document.getElementById('deadStockForm');
+        const deadStockTableBody = document.getElementById('deadStockTableBody');
+        const backToDashboardBtn = document.getElementById('backToDashboardBtn');
+        const printEntriesBtn = document.getElementById('printEntriesBtn');
+        const importBtn = document.getElementById('importBtn'); 
+        const excelFileInput = document.getElementById('excelFileInput'); 
+        const messageContainerId = 'message-container';
+        
+        let labId = null;
+        let unsubscribeFromEntries = null;
+
+        // AUTHENTICATION AND DATA LOADING
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const urlParams = new URLSearchParams(window.location.search);
+                labId = urlParams.get('labId');
+
+                if (labId) {
+                    loadAndDisplayEntries();
+                } else {
+                    showMessage('Error: No Lab ID provided in URL. Please go back to the dashboard.', 'error', messageContainerId);
+                    document.getElementById('addEntrySection').classList.add('hidden');
+                }
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        async function loadAndDisplayEntries() {
+            // Fetch and display the lab's name in the header
+            try {
+                const labDoc = await getDoc(doc(db, 'labs', labId));
+                if (labDoc.exists()) {
+                    document.getElementById('labNameDisplay').textContent = labDoc.data().name;
+                } else {
+                     document.getElementById('labNameDisplay').textContent = `Register for an unknown lab.`;
+                }
+            } catch (error) {
+                console.error("Error fetching lab name:", error);
+            }
+
+            if (unsubscribeFromEntries) {
+                unsubscribeFromEntries();
+            }
+
+            const registerCollectionRef = collection(db, 'labs', labId, 'deadStockRegister');
+            const q = query(registerCollectionRef, orderBy('timestamp', 'desc'));
+
+            // Listen for real-time updates
+            unsubscribeFromEntries = onSnapshot(q, (snapshot) => {
+                deadStockTableBody.innerHTML = ''; // Clear the table before rendering
+                if (snapshot.empty) {
+                    deadStockTableBody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-500">No dead stock entries found for this lab.</td></tr>`;
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const entry = doc.data();
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    // UPDATED: Changed the display name from productName to componentName
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${entry.componentName || 'N/A'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.description}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.supplier}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.billNo}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.billDate || 'N/A'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.quantity}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.value.toFixed(2)}</td>
+                    `;
+                    deadStockTableBody.appendChild(row);
+                });
+            }, (error) => {
+                console.error("Error fetching dead stock entries:", error);
+                showMessage('Error loading register entries.', 'error', messageContainerId);
+            });
+        }
+
+        // --- Manual Entry Logic ---
+        deadStockForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!labId) {
+                showMessage("Cannot add entry without a valid Lab ID.", 'error', messageContainerId);
+                return;
+            }
+
+            // Get form values (Changed variable name from productName to componentName for consistency)
+            const componentName = document.getElementById('componentName').value.trim(); 
+            const description = document.getElementById('description').value.trim();
+            const supplier = document.getElementById('supplier').value.trim();
+            const billNo = document.getElementById('billNo').value.trim();
+            const billDate = document.getElementById('billDate').value;
+            const quantity = parseInt(document.getElementById('quantity').value, 10);
+            const value = parseFloat(document.getElementById('value').value);
+
+            // UPDATED validation check to use componentName
+            if (!componentName || !description || !supplier || !billNo || !billDate || isNaN(quantity) || quantity <= 0 || isNaN(value)) {
+                showMessage("Please fill in all fields with valid data.", 'error', messageContainerId);
+                return;
+            }
+
+            try {
+                const registerCollectionRef = collection(db, 'labs', labId, 'deadStockRegister');
+                await addDoc(registerCollectionRef, {
+                    componentName, // Using componentName as the Firestore key
+                    description,
+                    supplier,
+                    billNo,
+                    billDate,
+                    quantity,
+                    value,
+                    timestamp: serverTimestamp()
+                });
+
+                showMessage("Dead stock entry added successfully!", 'success', messageContainerId);
+                deadStockForm.reset();
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                showMessage(`Error adding entry: ${error.message}`, 'error', messageContainerId);
+            }
+        });
+        
+        // --- Print Logic ---
+        printEntriesBtn.addEventListener('click', () => {
+            window.print();
+        });
+
+
+        // --- Excel Import Logic ---
+        importBtn.addEventListener('click', () => {
+            excelFileInput.click();
+        });
+
+        excelFileInput.addEventListener('change', handleExcelUpload);
+
+        function handleExcelUpload(e) {
+            if (!labId) {
+                showMessage("Cannot import entries without a valid Lab ID.", 'error', messageContainerId);
+                return;
+            }
+
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    // Use cellDates: true and dateNF to correctly parse dates
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: "yyyy-mm-dd" }); 
+                    const sheetName = workbook.SheetNames[0]; 
+                    const worksheet = workbook.Sheets[sheetName];
+
+                    // UPDATED: Changed the header name in JSON from "componentName" to "ComponentName" 
+                    // (Note: The JSON key names from sheet_to_json need to be capitalized as provided in the Excel sheet if not using the 'header' option, 
+                    // but here we are using 'header' to define our internal names, aligning with the excel structure documentation)
+                    // ASSUMED EXCEL COLUMN ORDER:
+                    // A: ComponentName, B: Description, C: Supplier, D: BillNo, E: BillDate, F: Quantity, G: Value
+                    const jsonEntries = XLSX.utils.sheet_to_json(worksheet, {
+                        header: [
+                            "ComponentName", // Renamed to use internal name for clarity in import logic
+                            "Description", 
+                            "Supplier", 
+                            "BillNo", 
+                            "BillDate", 
+                            "Quantity", 
+                            "Value"
+                        ],
+                        range: 1, // Skip the first row (assuming it's a header row)
+                        raw: false 
+                    });
+                    
+                    if (jsonEntries.length === 0) {
+                        showMessage("Excel sheet is empty or headers are missing. Expected 7 columns.", 'error', messageContainerId);
+                        return;
+                    }
+
+                    await saveExcelEntriesToFirestore(jsonEntries);
+
+                } catch (error) {
+                    console.error("Error processing Excel file:", error);
+                    showMessage(`Error reading Excel file: ${error.message}. Ensure it's a valid XLSX/XLS file and the structure is correct (7 columns required).`, 'error', messageContainerId);
+                } finally {
+                    excelFileInput.value = ''; 
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function saveExcelEntriesToFirestore(entries) {
+            const batch = writeBatch(db);
+            const registerCollectionRef = collection(db, 'labs', labId, 'deadStockRegister');
+            let successfulImports = 0;
+            let failedImports = 0;
+
+            for (const entry of entries) {
+                // Perform validation and conversion
+                const quantity = parseInt(entry.Quantity);
+                const value = parseFloat(entry.Value);
+                // Convert BillDate object to YYYY-MM-DD string
+                const billDateString = entry.BillDate instanceof Date ? entry.BillDate.toISOString().split('T')[0] : entry.BillDate;
+
+
+                // Validation check for mandatory fields and data types, using ComponentName key
+                if (entry.ComponentName && entry.Description && entry.Supplier && entry.BillNo && billDateString && !isNaN(quantity) && quantity > 0 && !isNaN(value) && value >= 0) {
+                    const newEntry = {
+                        componentName: entry.ComponentName.toString().trim(), // NEW KEY: componentName
+                        description: entry.Description.toString().trim(),
+                        supplier: entry.Supplier.toString().trim(),
+                        billNo: entry.BillNo.toString().trim(),
+                        billDate: billDateString,
+                        quantity: quantity,
+                        value: value,
+                        timestamp: serverTimestamp() 
+                    };
+                    
+                    const newDocRef = doc(registerCollectionRef);
+                    batch.set(newDocRef, newEntry);
+                    successfulImports++;
+                } else {
+                    failedImports++;
+                    console.warn("Skipping invalid dead stock entry:", entry);
+                }
+            }
+
+            try {
+                if (successfulImports > 0) {
+                    await batch.commit();
+                    showMessage(`${successfulImports} dead stock entries imported successfully! (${failedImports} failed/skipped).`, 'success', messageContainerId);
+                } else if (failedImports > 0) {
+                    showMessage(`All entries failed validation. Check the required 7 columns and data types in your spreadsheet.`, 'error', messageContainerId);
+                } else {
+                    showMessage("No valid data found to import.", 'warning', messageContainerId);
+                }
+            } catch (error) {
+                console.error("Firestore batch commit failed:", error);
+                showMessage(`Error committing batch: ${error.message}`, 'error', messageContainerId);
+            }
+        }
+        
+        // Navigation 
+        backToDashboardBtn.addEventListener('click', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dashboardType = urlParams.get('dashboard');
+            
+            let dashboardUrl = 'assistant_dashboard.html';
+            
+            if (dashboardType === 'incharge_dashboard') {
+                dashboardUrl = 'incharge_dashboard.html';
+            } else if (dashboardType === 'hod_dashboard') {
+                dashboardUrl = 'hod_dashboard.html';
+            }
+            
+            window.location.href = dashboardUrl;
+        });
+    </script>
+</body>
+</html>

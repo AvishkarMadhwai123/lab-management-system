@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style> 
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; } 
+
+        /* New CSS for Print Functionality */
+        @media print {
+            /* Hide non-essential elements on print */
+            #addEntrySection, 
+            #backToDashboardBtn, 
+            #printEntriesBtn,
+            #importExcelContainer,
+            #message-container, 
+            .border-b,
+            header .flex.space-x-3,
+            /* Hiding the Action column on print */
+            th:last-child, td:last-child { 
+                display: none !important;
+            }
+
+            /* Ensure the main content takes up full space */
+            .container {
+                max-width: 100%;
+                box-shadow: none;
+                padding: 0;
+            }
+
+            /* Ensure the table section is full width and content is visible */
+            .grid-cols-1.md\:grid-cols-2 {
+                display: block; /* Collapse grid layout for print */
+            }
+            #viewEntriesSection {
+                margin-top: 0;
+            }
+            .overflow-y-auto {
+                overflow: visible !important;
+                height: auto !important;
+                border: 1px solid #ddd;
+            }
+            
+            /* Add a title back for the printout */
+            body::before {
+                content: "Issue Register Report";
+                display: block;
+                font-size: 24pt;
+                font-weight: bold;
+                margin-bottom: 20px;
+                padding: 20px 20px 0 20px;
+            }
+            #labNameDisplay::before {
+                content: "Lab: ";
+                font-size: 14pt;
+                font-weight: 500;
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-6">
+    <div class="container mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg max-w-5xl">
+        
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">Issue Register</h1>
+                <p id="labNameDisplay" class="text-gray-500 mt-1">Loading lab information...</p>
+            </div>
+            <div class="flex space-x-3 mt-4 sm:mt-0">
+                <div id="importExcelContainer" class="flex items-center space-x-2">
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden">
+                    <button id="importBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors">
+                        Import from Excel
+                    </button>
+                </div>
+
+                <button id="printEntriesBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors">
+                    Print Register
+                </button>
+
+                <button id="backToDashboardBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg mt-4 sm:mt-0">
+                    Back to Dashboard
+                </button>
+            </div>
+        </header>
+
+        <div id="message-container" class="mb-6"></div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <section id="addEntrySection">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Log New Issue Entry (Manual)</h2>
+                <form id="issue-form" class="space-y-4">
+                    <div>
+                        <label for="componentName" class="block text-sm font-medium text-gray-700">Name of Component <span class="text-red-500">*</span></label>
+                        <input type="text" id="componentName" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 border">
+                    </div>
+                    <div>
+                        <label for="issuedTo" class="block text-sm font-medium text-gray-700">Issued to Whom (e.g., Student Name/ID) <span class="text-red-500">*</span></label>
+                        <input type="text" id="issuedTo" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 border">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="dateOfIssue" class="block text-sm font-medium text-gray-700">Date of Issue <span class="text-red-500">*</span></label>
+                            <input type="date" id="dateOfIssue" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 border">
+                        </div>
+                        <div>
+                            <label for="quantity" class="block text-sm font-medium text-gray-700">Quantity <span class="text-red-500">*</span></label>
+                            <input type="number" id="quantity" required min="1"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 border">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="expectedReturnDate" class="block text-sm font-medium text-gray-700">Expected Return Date</label>
+                            <input type="date" id="expectedReturnDate"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 border">
+                        </div>
+                        <div>
+                            <label for="returnStatus" class="block text-sm font-medium text-gray-700">Return Status</label>
+                            <select id="returnStatus" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 border bg-white">
+                                <option value="Not Returned">Not Returned</option>
+                                <option value="Returned">Returned</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" class="py-2 px-6 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold transition-colors">
+                            Add Entry
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section id="viewEntriesSection">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Existing Issue Entries</h2>
+                <div class="overflow-y-auto rounded-lg shadow border h-96">
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-100 sticky top-0">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Component</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issued To</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th> </tr>
+                        </thead>
+                        <tbody id="entries-table-body" class="divide-y divide-gray-200">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+    
+    <script type="module">
+        // Import from centralized files
+        import { app } from './firebase-config.js';
+        import { showMessage } from './utils.js';
+
+        // Import Firebase modules
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            onSnapshot, 
+            serverTimestamp, 
+            query, 
+            doc, 
+            getDoc,
+            updateDoc, // Import updateDoc for status change
+            orderBy,
+            writeBatch 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Initialize services
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // UI element references
+        const issueForm = document.getElementById('issue-form');
+        const backToDashboardBtn = document.getElementById('backToDashboardBtn');
+        const printEntriesBtn = document.getElementById('printEntriesBtn');
+        const importBtn = document.getElementById('importBtn');
+        const excelFileInput = document.getElementById('excelFileInput');
+        const entriesTableBody = document.getElementById('entries-table-body');
+        const messageContainerId = 'message-container';
+
+        let labId = null;
+        let unsubscribeFromEntries = null;
+
+        // AUTHENTICATION AND DATA LOADING
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const urlParams = new URLSearchParams(window.location.search);
+                labId = urlParams.get('labId');
+                if (labId) {
+                    loadAndDisplayEntries();
+                    // Attach event listener for status changes after initial load
+                    entriesTableBody.addEventListener('click', handleTableAction);
+                } else {
+                    showMessage('Error: No Lab ID provided. Please return to the dashboard.', 'error', messageContainerId);
+                    document.getElementById('addEntrySection').classList.add('hidden');
+                }
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        async function loadAndDisplayEntries() {
+            try {
+                const labDoc = await getDoc(doc(db, 'labs', labId));
+                if (labDoc.exists()) {
+                    document.getElementById('labNameDisplay').textContent = `For Lab: ${labDoc.data().name}`;
+                }
+            } catch (error) { console.error("Error fetching lab name:", error); }
+
+            if (unsubscribeFromEntries) unsubscribeFromEntries();
+
+            const registerCollectionRef = collection(db, 'labs', labId, 'issueRegister');
+            const q = query(registerCollectionRef, orderBy('timestamp', 'desc'));
+
+            unsubscribeFromEntries = onSnapshot(q, (snapshot) => {
+                entriesTableBody.innerHTML = '';
+                if (snapshot.empty) {
+                    entriesTableBody.innerHTML = `<tr><td colspan="6" class="text-center p-4 text-gray-500">No issue entries found.</td></tr>`;
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const entry = doc.data();
+                    const docId = doc.id; // Get the Firestore document ID
+                    const isReturned = entry.returnStatus === 'Returned';
+                    const statusColor = isReturned ? 'text-green-600' : 'text-yellow-600';
+                    
+                    const actionButton = !isReturned
+                        ? `<button data-doc-id="${docId}" data-action="return" class="text-xs bg-indigo-500 hover:bg-indigo-600 text-white py-1 px-3 rounded">Mark as Returned</button>`
+                        : `<span class="text-xs text-gray-500">Completed</span>`;
+
+                    const row = `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${entry.componentName}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.issuedTo}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.dateOfIssue}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.quantity}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold ${statusColor}">${entry.returnStatus}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${actionButton}</td> </tr>`;
+                    entriesTableBody.insertAdjacentHTML('beforeend', row);
+                });
+            }, (error) => {
+                console.error("Error fetching entries:", error);
+                showMessage('Error loading entries.', 'error', messageContainerId);
+            });
+        }
+        
+        // --- NEW: Status Update Handler ---
+        function handleTableAction(e) {
+            const button = e.target.closest('button[data-action="return"]');
+            if (button) {
+                const docId = button.dataset.docId;
+                toggleReturnStatus(docId);
+            }
+        }
+
+        async function toggleReturnStatus(docId) {
+            if (!labId) return;
+
+            const entryRef = doc(db, 'labs', labId, 'issueRegister', docId);
+            
+            try {
+                // Update the status to 'Returned'
+                await updateDoc(entryRef, {
+                    returnStatus: 'Returned'
+                });
+                showMessage('Item successfully marked as Returned.', 'success', messageContainerId);
+            } catch (error) {
+                console.error("Error updating document status: ", error);
+                showMessage(`Error updating status: ${error.message}`, 'error', messageContainerId);
+            }
+        }
+
+        // --- Manual Entry Logic ---
+        issueForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!labId) {
+                showMessage("Cannot add entry without a valid Lab ID.", 'error', messageContainerId);
+                return;
+            }
+
+            const formData = {
+                componentName: document.getElementById('componentName').value.trim(),
+                issuedTo: document.getElementById('issuedTo').value.trim(),
+                dateOfIssue: document.getElementById('dateOfIssue').value,
+                quantity: parseInt(document.getElementById('quantity').value),
+                expectedReturnDate: document.getElementById('expectedReturnDate').value,
+                returnStatus: document.getElementById('returnStatus').value
+            };
+
+            if (!formData.componentName || !formData.issuedTo || !formData.dateOfIssue || isNaN(formData.quantity) || formData.quantity <= 0) {
+                showMessage("Please fill all required fields correctly.", 'error', messageContainerId);
+                return;
+            }
+
+            try {
+                const registerCollectionRef = collection(db, 'labs', labId, 'issueRegister');
+                await addDoc(registerCollectionRef, { ...formData, timestamp: serverTimestamp() });
+                showMessage("Issue entry added successfully!", 'success', messageContainerId);
+                issueForm.reset();
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                showMessage(`Error adding entry: ${error.message}`, 'error', messageContainerId);
+            }
+        });
+        
+        // --- Print Logic ---
+        printEntriesBtn.addEventListener('click', () => {
+            window.print();
+        });
+
+        // --- Excel Import Logic ---
+        importBtn.addEventListener('click', () => {
+            excelFileInput.click();
+        });
+
+        excelFileInput.addEventListener('change', handleExcelUpload);
+
+        function handleExcelUpload(e) {
+            if (!labId) {
+                showMessage("Cannot import entries without a valid Lab ID.", 'error', messageContainerId);
+                return;
+            }
+
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: "yyyy-mm-dd" }); 
+                    const sheetName = workbook.SheetNames[0]; 
+                    const worksheet = workbook.Sheets[sheetName];
+
+                    const jsonEntries = XLSX.utils.sheet_to_json(worksheet, {
+                        header: [
+                            "componentName", 
+                            "issuedTo", 
+                            "dateOfIssue", 
+                            "quantity", 
+                            "expectedReturnDate", 
+                            "returnStatus"
+                        ],
+                        range: 1, 
+                        raw: false 
+                    });
+                    
+                    if (jsonEntries.length === 0) {
+                        showMessage("Excel sheet is empty or headers are missing. Expected 6 columns.", 'error', messageContainerId);
+                        return;
+                    }
+
+                    await saveExcelEntriesToFirestore(jsonEntries);
+
+                } catch (error) {
+                    console.error("Error processing Excel file:", error);
+                    showMessage(`Error reading Excel file: ${error.message}. Ensure it's a valid XLSX/XLS file and the structure is correct.`, 'error', messageContainerId);
+                } finally {
+                    excelFileInput.value = ''; 
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function saveExcelEntriesToFirestore(entries) {
+            const batch = writeBatch(db);
+            const registerCollectionRef = collection(db, 'labs', labId, 'issueRegister');
+            let successfulImports = 0;
+            let failedImports = 0;
+
+            // Date formatting helper
+            const formatDate = (dateValue) => {
+                if (dateValue instanceof Date) {
+                    return dateValue.toISOString().split('T')[0];
+                }
+                return dateValue ? dateValue.toString().trim() : '';
+            };
+
+            for (const entry of entries) {
+                // Parse and validate data
+                const quantity = parseInt(entry.quantity);
+                const issueDate = formatDate(entry.dateOfIssue);
+                const expectedReturn = formatDate(entry.expectedReturnDate);
+                // Robust check: if the imported string is 'Returned' (case-insensitive) or similar, mark as Returned
+                const status = entry.returnStatus && entry.returnStatus.toString().trim().toLowerCase().includes('return') ? 'Returned' : 'Not Returned';
+
+
+                // Validation check for mandatory fields and data types
+                if (entry.componentName && entry.issuedTo && issueDate && !isNaN(quantity) && quantity > 0) {
+                    const newEntry = {
+                        componentName: entry.componentName.toString().trim(),
+                        issuedTo: entry.issuedTo.toString().trim(),
+                        dateOfIssue: issueDate,
+                        quantity: quantity,
+                        expectedReturnDate: expectedReturn || null,
+                        returnStatus: status,
+                        timestamp: serverTimestamp() 
+                    };
+                    
+                    const newDocRef = doc(registerCollectionRef);
+                    batch.set(newDocRef, newEntry);
+                    successfulImports++;
+                } else {
+                    failedImports++;
+                    console.warn("Skipping invalid issue entry:", entry);
+                }
+            }
+
+            try {
+                if (successfulImports > 0) {
+                    await batch.commit();
+                    showMessage(`${successfulImports} issue entries imported successfully! (${failedImports} failed/skipped).`, 'success', messageContainerId);
+                } else if (failedImports > 0) {
+                    showMessage(`All entries failed validation. Check the required columns and data types in your spreadsheet.`, 'error', messageContainerId);
+                } else {
+                    showMessage("No valid data found to import.", 'warning', messageContainerId);
+                }
+            } catch (error) {
+                console.error("Firestore batch commit failed:", error);
+                showMessage(`Error committing batch: ${error.message}`, 'error', messageContainerId);
+            }
+        }
+        
+        // --- Navigation ---
+        backToDashboardBtn.addEventListener('click', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dashboard = urlParams.get('dashboard');
+            
+            let dashboardUrl = 'assistant_dashboard.html';
+            if (dashboard === 'incharge_dashboard') {
+                dashboardUrl = 'incharge_dashboard.html';
+            } else if (dashboard === 'hod_dashboard') {
+                dashboardUrl = 'hod_dashboard.html';
+            }
+            window.location.href = dashboardUrl;
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+services:
+  # Backend API Service
+  - type: web
+    name: lab-management-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      # Firebase Configuration (set these in Render dashboard)
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+    healthCheckPath: /api/health
+    autoDeploy: true
+    
+  # Frontend Static Site
+  - type: web
+    name: lab-management-frontend
+    runtime: static
+    plan: free
+    buildCommand: echo "No build needed - static files"
+    staticPublishPath: ./frontend
+    rootDir: ./
+    envVars:
+      - key: NODE_ENV
+        value: production
+    # Route API calls to backend
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://lab-management-backend.onrender.com/api/*
+      # Handle client-side routing
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    autoDeploy: true

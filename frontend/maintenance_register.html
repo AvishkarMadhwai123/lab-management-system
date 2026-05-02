@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repair and Maintenance Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style> 
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; } 
+        .tab-button.active { border-color: #4f46e5; color: #4f46e5; }
+
+        /* New CSS for Print Functionality */
+        @media print {
+            /* Hide non-essential elements on print */
+            #repair-form, 
+            #backToDashboardBtn, 
+            #printEntriesBtn,
+            #importExcelContainer,
+            #message-container, 
+            .border-b,
+            .tab-button,
+            .lg\:col-span-1, /* Hide the form section */
+            header .flex.space-x-3 { 
+                display: none;
+            }
+
+            /* Ensure the main content takes up full space */
+            .container {
+                max-width: 100%;
+                box-shadow: none;
+                padding: 0;
+            }
+
+            /* Display the approved log for printing */
+            #approvedSection {
+                display: block !important;
+                width: 100%;
+                margin-top: 0;
+            }
+            .lg\:col-span-2 {
+                grid-column: 1 / -1; /* Make table section full width */
+            }
+            .overflow-y-auto {
+                overflow: visible !important;
+                height: auto !important;
+                border: none;
+                max-height: none !important;
+            }
+            
+            /* Add a title back for the printout */
+            body::before {
+                content: "Repair and Maintenance Register Log";
+                display: block;
+                font-size: 24pt;
+                font-weight: bold;
+                margin-bottom: 20px;
+                padding: 20px 20px 0 20px;
+            }
+            #labNameDisplay {
+                font-size: 14pt;
+                font-weight: 500;
+                display: block;
+                padding: 0 20px;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-6">
+    <div class="container mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg max-w-6xl">
+        
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">Repair and Maintenance Register</h1>
+                <p id="labNameDisplay" class="text-gray-500 mt-1">Loading lab information...</p>
+            </div>
+            <div class="flex space-x-3 mt-4 sm:mt-0">
+                <div id="importExcelContainer" class="flex items-center space-x-2">
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden">
+                    <button id="importBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors">
+                        Import Excel Log
+                    </button>
+                </div>
+
+                <button id="printEntriesBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors">
+                    Print Log
+                </button>
+                
+                <button id="backToDashboardBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-md transition-colors">
+                    Back to Dashboard
+                </button>
+            </div>
+        </header>
+
+        <div id="message-container" class="mb-6"></div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <section class="lg:col-span-1">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Add New Entry</h2>
+                <form id="repair-form" class="space-y-4 bg-gray-50 p-6 rounded-lg border">
+                    <div>
+                        <label for="instrumentName" class="block text-sm font-medium text-gray-700">Instrument Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="instrumentName" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="faultType" class="block text-sm font-medium text-gray-700">Type of Fault <span class="text-red-500">*</span></label>
+                        <input type="text" id="faultType" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="dateOfFailure" class="block text-sm font-medium text-gray-700">Date of Failure <span class="text-red-500">*</span></label>
+                        <input type="date" id="dateOfFailure" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="dateOfRepair" class="block text-sm font-medium text-gray-700">Date of Repair</label>
+                        <input type="date" id="dateOfRepair" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="costOfRepair" class="block text-sm font-medium text-gray-700"> Cost (₹)</label>
+                        <input type="number" id="costOfRepair" min="0" step="0.01" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="remarks" class="block text-sm font-medium text-gray-700">Remarks</label>
+                        <textarea id="remarks" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" class="w-full py-2 px-6 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold transition-colors">
+                            Submit for Approval
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="lg:col-span-2">
+                <div class="flex space-x-4 border-b mb-4">
+                    <button id="pendingTab" class="tab-button active py-2 px-4 font-semibold border-b-2">Pending Requests</button>
+                    <button id="approvedTab" class="tab-button py-2 px-4 font-semibold border-b-2 text-gray-500">Approved Log</button>
+                </div>
+
+                <div id="pendingSection">
+                    <div class="overflow-y-auto rounded-lg shadow border max-h-[60vh]">
+                        <table class="min-w-full bg-white">
+                            <thead class="bg-gray-100 sticky top-0">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Instrument</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fault</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted On</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pending-table-body" class="divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="approvedSection" class="hidden">
+                     <div class="overflow-y-auto rounded-lg shadow border max-h-[60vh]">
+                        <table class="min-w-full bg-white">
+                            <thead class="bg-gray-100 sticky top-0">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Instrument</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Failure Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Repair Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cost (₹)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody id="approved-table-body" class="divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { app } from './firebase-config.js';
+        import { showMessage } from './utils.js';
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, collection, addDoc, onSnapshot, serverTimestamp, 
+            query, doc, getDoc, orderBy, where, writeBatch
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        const repairForm = document.getElementById('repair-form');
+        const backToDashboardBtn = document.getElementById('backToDashboardBtn');
+        const printEntriesBtn = document.getElementById('printEntriesBtn'); // NEW
+        const importBtn = document.getElementById('importBtn');             // NEW
+        const excelFileInput = document.getElementById('excelFileInput');   // NEW
+        const pendingTableBody = document.getElementById('pending-table-body');
+        const approvedTableBody = document.getElementById('approved-table-body');
+        const pendingTab = document.getElementById('pendingTab');
+        const approvedTab = document.getElementById('approvedTab');
+        const pendingSection = document.getElementById('pendingSection');
+        const approvedSection = document.getElementById('approvedSection');
+        const messageContainerId = 'message-container';
+
+        let labId = null;
+        let unsubscribers = [];
+        let labData = null;
+        let currentUserData = null;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if(userDoc.exists()){
+                    currentUserData = userDoc.data();
+                }
+
+                const urlParams = new URLSearchParams(window.location.search);
+                labId = urlParams.get('labId');
+                if (labId) {
+                    try {
+                        const labDoc = await getDoc(doc(db, 'labs', labId));
+                        if(labDoc.exists()){
+                            labData = labDoc.data();
+                            document.getElementById('labNameDisplay').textContent = `For Lab: ${labData.name}`;
+                        }
+                        setupListeners();
+                    } catch (error) {
+                        showMessage('Error loading lab data.', 'error', messageContainerId);
+                    }
+                } else {
+                    showMessage('Error: No Lab ID provided. Please return to the dashboard and select a lab.', 'error', messageContainerId);
+                }
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        function setupListeners() {
+            unsubscribers.forEach(unsub => unsub());
+            unsubscribers = [];
+
+            // Listener for Pending Maintenance Requests
+            const pendingQuery = query(collection(db, 'maintenanceRequests'), where('labId', '==', labId), where('status', '==', 'pending'), orderBy('timestamp', 'desc'));
+            const unsubPending = onSnapshot(pendingQuery, snapshot => {
+                pendingTableBody.innerHTML = '';
+                if(snapshot.empty) pendingTableBody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-gray-500">No pending requests.</td></tr>`;
+                snapshot.forEach(doc => {
+                    const req = doc.data();
+                    const submissionDate = req.timestamp ? req.timestamp.toDate().toLocaleDateString() : 'N/A';
+                    pendingTableBody.innerHTML += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${req.instrumentName}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${req.faultType}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${submissionDate}</td>
+                        </tr>
+                    `;
+                });
+            });
+
+            // Listener for Approved Log Entries
+            const approvedQuery = query(collection(db, 'labs', labId, 'maintenanceRegister'), orderBy('timestamp', 'desc'));
+            const unsubApproved = onSnapshot(approvedQuery, snapshot => {
+                approvedTableBody.innerHTML = '';
+                if(snapshot.empty) approvedTableBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">No approved log entries.</td></tr>`;
+                snapshot.forEach(doc => {
+                    const entry = doc.data();
+                    approvedTableBody.innerHTML += `
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${entry.instrumentName}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.dateOfFailure}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.dateOfRepair || 'N/A'}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.costOfRepair ? entry.costOfRepair.toFixed(2) : 'N/A'}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.remarks || '—'}</td>
+                            </tr>
+                    `;
+                });
+            });
+
+            unsubscribers.push(unsubPending, unsubApproved);
+        }
+
+        // --- Manual Submission Logic (Original Code) ---
+        repairForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!labId || !auth.currentUser || !currentUserData) return;
+
+            const requestData = {
+                instrumentName: document.getElementById('instrumentName').value.trim(),
+                faultType: document.getElementById('faultType').value.trim(),
+                dateOfFailure: document.getElementById('dateOfFailure').value,
+                dateOfRepair: document.getElementById('dateOfRepair').value,
+                costOfRepair: parseFloat(document.getElementById('costOfRepair').value) || 0,
+                remarks: document.getElementById('remarks').value.trim(),
+                labId: labId,
+                labName: labData.name,
+                submittedBy: currentUserData.name,
+                submittedById: auth.currentUser.uid,
+                status: 'pending',
+                timestamp: serverTimestamp()
+            };
+
+            if (!requestData.instrumentName || !requestData.faultType || !requestData.dateOfFailure) {
+                showMessage("Please fill all required fields (*).", 'error', messageContainerId);
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, 'maintenanceRequests'), requestData);
+                showMessage("Maintenance request submitted for approval!", 'success', messageContainerId);
+                repairForm.reset();
+            } catch (error) {
+                showMessage(`Error submitting request: ${error.message}`, 'error', messageContainerId);
+            }
+        });
+        
+        // --- NEW: Print Logic ---
+        printEntriesBtn.addEventListener('click', () => {
+            // Ensure the approved log is visible before printing
+            approvedTab.click();
+            window.print();
+        });
+
+        // --- NEW: Excel Import Logic ---
+        importBtn.addEventListener('click', () => {
+            excelFileInput.click();
+        });
+
+        excelFileInput.addEventListener('change', handleExcelUpload);
+
+        function handleExcelUpload(e) {
+            if (!labId) {
+                showMessage("Cannot import entries without a valid Lab ID.", 'error', messageContainerId);
+                return;
+            }
+
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    // Use cellDates: true and dateNF to correctly parse dates
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: "yyyy-mm-dd" }); 
+                    const sheetName = workbook.SheetNames[0]; 
+                    const worksheet = workbook.Sheets[sheetName];
+
+                    // ASSUMED EXCEL COLUMN ORDER:
+                    // A: InstrumentName, B: FaultType, C: DateOfFailure, D: DateOfRepair, E: CostOfRepair, F: Remarks
+                    const jsonEntries = XLSX.utils.sheet_to_json(worksheet, {
+                        header: [
+                            "instrumentName", 
+                            "faultType", 
+                            "dateOfFailure", 
+                            "dateOfRepair", 
+                            "costOfRepair", 
+                            "remarks"
+                        ],
+                        range: 1, // Skip the first row (assuming it's a header row)
+                        raw: false 
+                    });
+                    
+                    if (jsonEntries.length === 0) {
+                        showMessage("Excel sheet is empty or headers are missing. Expected 6 columns.", 'error', messageContainerId);
+                        return;
+                    }
+
+                    await saveExcelEntriesToFirestore(jsonEntries);
+
+                } catch (error) {
+                    console.error("Error processing Excel file:", error);
+                    showMessage(`Error reading Excel file: ${error.message}. Ensure it's a valid XLSX/XLS file and the structure is correct.`, 'error', messageContainerId);
+                } finally {
+                    excelFileInput.value = ''; 
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function saveExcelEntriesToFirestore(entries) {
+            const batch = writeBatch(db);
+            const registerCollectionRef = collection(db, 'labs', labId, 'maintenanceRegister');
+            let successfulImports = 0;
+            let failedImports = 0;
+
+            for (const entry of entries) {
+                // Parse and validate data
+                const cost = parseFloat(entry.costOfRepair) || 0;
+                
+                // Date formatting helper
+                const formatDate = (dateValue) => {
+                    if (dateValue instanceof Date) {
+                        return dateValue.toISOString().split('T')[0];
+                    }
+                    return dateValue ? dateValue.toString().trim() : '';
+                };
+                
+                const failureDate = formatDate(entry.dateOfFailure);
+                const repairDate = formatDate(entry.dateOfRepair);
+
+                // Validation check for mandatory fields (Instrument, Fault, Failure Date)
+                if (entry.instrumentName && entry.faultType && failureDate) {
+                    const newEntry = {
+                        instrumentName: entry.instrumentName.toString().trim(),
+                        faultType: entry.faultType.toString().trim(),
+                        dateOfFailure: failureDate,
+                        dateOfRepair: repairDate || null,
+                        costOfRepair: cost,
+                        remarks: entry.remarks ? entry.remarks.toString().trim() : '',
+                        timestamp: serverTimestamp() 
+                    };
+                    
+                    const newDocRef = doc(registerCollectionRef);
+                    batch.set(newDocRef, newEntry);
+                    successfulImports++;
+                } else {
+                    failedImports++;
+                    console.warn("Skipping invalid maintenance entry:", entry);
+                }
+            }
+
+            try {
+                if (successfulImports > 0) {
+                    await batch.commit();
+                    showMessage(`${successfulImports} maintenance log entries imported successfully! (${failedImports} failed/skipped).`, 'success', messageContainerId);
+                } else if (failedImports > 0) {
+                    showMessage(`All entries failed validation. Check the required columns and data types in your spreadsheet.`, 'error', messageContainerId);
+                } else {
+                    showMessage("No valid data found to import.", 'warning', messageContainerId);
+                }
+            } catch (error) {
+                console.error("Firestore batch commit failed:", error);
+                showMessage(`Error committing batch: ${error.message}`, 'error', messageContainerId);
+            }
+        }
+
+        // --- Tab Switching and Navigation (Original Code) ---
+        pendingTab.addEventListener('click', () => {
+            pendingSection.classList.remove('hidden');
+            approvedSection.classList.add('hidden');
+            pendingTab.classList.add('active');
+            approvedTab.classList.remove('active');
+        });
+
+        approvedTab.addEventListener('click', () => {
+            approvedSection.classList.remove('hidden');
+            pendingSection.classList.add('hidden');
+            approvedTab.classList.add('active');
+            pendingTab.classList.remove('active');
+        });
+
+        backToDashboardBtn.addEventListener('click', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dashboard = urlParams.get('dashboard');
+            
+            let dashboardUrl = 'assistant_dashboard.html';
+            if (dashboard === 'incharge_dashboard') {
+                dashboardUrl = 'incharge_dashboard.html';
+            } else if (dashboard === 'hod_dashboard') {
+                dashboardUrl = 'hod_dashboard.html';
+            }
+            window.location.href = dashboardUrl;
+        });
+    </script>
+</body>
+</html>
